@@ -1,0 +1,64 @@
+# 智能桌面疲劳监测系统 - 配置文件
+
+# 摄像头配置
+camera:
+  resolution:
+    width: 640
+    height: 480
+  fps: 30
+  flip: false  # 是否翻转画面
+
+# MediaPipe人脸检测配置
+face_detection:
+  max_num_faces: 1  # 最多检测人脸数
+  min_detection_confidence: 0.5  # 检测置信度
+  min_tracking_confidence: 0.5   # 跟踪置信度
+  refine_landmarks: false  # 是否使用精细关键点
+
+# 疲劳检测参数
+fatigue:
+  ear_threshold: 0.25  # EAR阈值，低于此值判定为闭眼
+  perclos_threshold: 0.15  # PERCLOS阈值，超过15%判定为疲劳
+  perclos_window: 60  # PERCLOS统计窗口（秒）
+  blink_min: 10  # 每分钟最少眨眼次数
+  blink_max: 30  # 每分钟最多眨眼次数
+  closed_eye_duration: 2.0  # 连续闭眼触发警报时长（秒）
+
+# 距离监测参数
+distance:
+  warning_distance: 50  # 警告距离（厘米）
+  warning_duration: 30  # 持续时长触发提醒（秒）
+  known_face_width: 14.5  # 平均人脸宽度（厘米）
+  focal_length: 600  # 摄像头焦距（需校准）
+
+# 坐姿监测参数
+posture:
+  pitch_threshold_down: 30  # 低头角度阈值（度）
+  pitch_threshold_up: -15   # 仰头角度阈值（度）
+  warning_duration: 60  # 持续时长触发提醒（秒）
+
+# 提醒配置
+alert:
+  enable_voice: true   # 启用语音提醒
+  enable_led: false    # 启用LED提醒（树莓派）
+  enable_gui: true     # 启用GUI弹窗
+  cooldown_time: 300   # 提醒冷却时间（秒）
+
+# LED配置（仅树莓派）
+led:
+  pin: 17  # GPIO引脚号
+  blink_duration: 2  # 闪烁持续时间（秒）
+
+# 数据记录配置
+logging:
+  enable: true
+  database: "data/fatigue_monitor.db"
+  log_interval: 60  # 记录间隔（秒）
+
+# 性能配置
+performance:
+  skip_frames: 1  # 跳帧数（0表示不跳帧）
+  process_resolution:
+    width: 320
+    height: 240
+  display_fps: true  # 显示帧率
