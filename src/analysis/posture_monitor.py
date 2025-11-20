@@ -18,8 +18,8 @@ class PostureMonitor:
 
     def __init__(
         self,
-        pitch_threshold_down: float = 30.0,
-        pitch_threshold_up: float = -15.0,
+        pitch_threshold_down: float = 12.0,
+        pitch_threshold_up: float = -8.0,
         warning_duration: float = 60.0,
         focal_length: float = 600.0,
         image_width: int = 640,
@@ -136,11 +136,22 @@ class PostureMonitor:
         rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
 
         # 从旋转矩阵提取欧拉角
-        # 使用ZYX欧拉角约定
-        pitch = math.atan2(-rotation_matrix[2][0],
-                          math.sqrt(rotation_matrix[2][1]**2 + rotation_matrix[2][2]**2))
-        yaw = math.atan2(rotation_matrix[1][0], rotation_matrix[0][0])
-        roll = math.atan2(rotation_matrix[2][1], rotation_matrix[2][2])
+        # 使用更稳定的欧拉角提取方法（XYZ顺序）
+
+        # Pitch（俯仰角）- 绕X轴旋转，低头为正，抬头为负
+        sy = math.sqrt(rotation_matrix[0, 0]**2 + rotation_matrix[1, 0]**2)
+
+        singular = sy < 1e-6
+
+        if not singular:
+            pitch = math.atan2(-rotation_matrix[2, 0], sy)
+            yaw = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+            roll = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+        else:
+            # Gimbal lock情况
+            pitch = math.atan2(-rotation_matrix[2, 0], sy)
+            yaw = math.atan2(-rotation_matrix[0, 1], rotation_matrix[1, 1])
+            roll = 0
 
         # 转换为度
         pitch = math.degrees(pitch)
