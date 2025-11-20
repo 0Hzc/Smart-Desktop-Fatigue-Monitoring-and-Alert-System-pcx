@@ -140,28 +140,15 @@ class PostureMonitor:
         # 转换为旋转矩阵
         rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
 
-        # 从旋转矩阵提取欧拉角
-        # 使用更稳定的欧拉角提取方法（XYZ顺序）
+        # 使用OpenCV的RQDecomp3x3分解旋转矩阵
+        # 这是专门用于从旋转矩阵提取欧拉角的函数
+        euler_angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotation_matrix)
 
-        # Pitch（俯仰角）- 绕X轴旋转，低头为正，抬头为负
-        sy = math.sqrt(rotation_matrix[0, 0]**2 + rotation_matrix[1, 0]**2)
-
-        singular = sy < 1e-6
-
-        if not singular:
-            pitch = math.atan2(-rotation_matrix[2, 0], sy)
-            yaw = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
-            roll = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
-        else:
-            # Gimbal lock情况
-            pitch = math.atan2(-rotation_matrix[2, 0], sy)
-            yaw = math.atan2(-rotation_matrix[0, 1], rotation_matrix[1, 1])
-            roll = 0
-
-        # 转换为度
-        pitch = math.degrees(pitch)
-        yaw = math.degrees(yaw)
-        roll = math.degrees(roll)
+        # RQDecomp3x3返回的角度已经是度数
+        # 返回格式：[pitch, yaw, roll]
+        pitch = euler_angles[0]
+        yaw = euler_angles[1]
+        roll = euler_angles[2]
 
         return pitch, yaw, roll
 
@@ -317,6 +304,12 @@ def test_posture_monitor():
 
     from camera.camera_capture import CameraCapture
     from detection.face_detector import FaceDetector
+    from utils.config_loader import get_config
+
+    # 加载配置
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config.yaml')
+    config = get_config(config_path)
+    posture_config = config.get_posture_config()
 
     # 初始化模块
     camera = CameraCapture(resolution=(640, 480))
@@ -325,8 +318,8 @@ def test_posture_monitor():
 
     detector = FaceDetector()
     monitor = PostureMonitor(
-        pitch_threshold_down=30.0,
-        pitch_threshold_up=-15.0,
+        pitch_threshold_down=posture_config['pitch_threshold_down'],
+        pitch_threshold_up=posture_config['pitch_threshold_up'],
         warning_duration=5.0  # 测试时缩短为5秒
     )
 
