@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from camera.camera_capture import CameraCapture
 from detection.face_detector import FaceDetector, LandmarkIndices
+from analysis.fatigue_analyzer import FatigueAnalyzer
 from utils.config_loader import get_config
 
 
@@ -52,6 +53,17 @@ class FatigueMonitorSystem:
             min_detection_confidence=face_config['min_detection_confidence'],
             min_tracking_confidence=face_config['min_tracking_confidence'],
             refine_landmarks=face_config['refine_landmarks']
+        )
+
+        # 初始化疲劳分析器
+        fatigue_config = self.config.get_fatigue_config()
+        self.fatigue_analyzer = FatigueAnalyzer(
+            ear_threshold=fatigue_config['ear_threshold'],
+            perclos_threshold=fatigue_config['perclos_threshold'],
+            perclos_window=fatigue_config['perclos_window'],
+            blink_min=fatigue_config['blink_min'],
+            blink_max=fatigue_config['blink_max'],
+            closed_eye_duration=fatigue_config['closed_eye_duration']
         )
 
         # 性能配置
@@ -140,16 +152,16 @@ class FatigueMonitorSystem:
                             2
                         )
 
-                        # 显示状态文本
-                        cv2.putText(
-                            display_frame,
-                            "Face Detected",
-                            (10, 90),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.7,
-                            (0, 255, 0),
-                            2
-                        )
+                        # === 疲劳分析 ===
+                        # 提取眼部关键点
+                        left_eye = landmarks_array[LandmarkIndices.LEFT_EYE]
+                        right_eye = landmarks_array[LandmarkIndices.RIGHT_EYE]
+
+                        # 更新疲劳分析
+                        fatigue_status = self.fatigue_analyzer.update(left_eye, right_eye)
+
+                        # 显示疲劳分析结果
+                        self._draw_fatigue_info(display_frame, fatigue_status)
 
                 else:
                     # 未检测到人脸
@@ -206,6 +218,103 @@ class FatigueMonitorSystem:
 
         finally:
             self.cleanup()
+
+    def _draw_fatigue_info(self, frame, status: dict):
+        """
+        在画面上绘制疲劳分析信息
+
+        Args:
+            frame: 视频帧
+            status: 疲劳状态字典
+        """
+        h, w = frame.shape[:2]
+        y_offset = 90
+        line_height = 30
+
+        # 定义疲劳等级颜色
+        fatigue_colors = {
+            0: (0, 255, 0),      # 绿色 - 正常
+            1: (0, 255, 255),    # 黄色 - 轻度
+            2: (0, 165, 255),    # 橙色 - 中度
+            3: (0, 0, 255)       # 红色 - 重度
+        }
+
+        # 1. EAR值
+        ear_color = (0, 255, 0) if not status['is_closed'] else (0, 0, 255)
+        ear_text = f"EAR: {status['avg_ear']:.3f}"
+        if status['is_closed']:
+            ear_text += " (CLOSED)"
+        cv2.putText(frame, ear_text, (10, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, ear_color, 2)
+        y_offset += line_height
+
+        # 2. 眨眼计数
+        blink_text = f"Blinks: {status['blink_counter']}"
+        if status['blinks_per_minute'] > 0:
+            blink_text += f" ({status['blinks_per_minute']}/min)"
+        cv2.putText(frame, blink_text, (10, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        y_offset += line_height
+
+        # 3. PERCLOS
+        perclos_color = (0, 255, 0) if status['perclos'] < 0.15 else (0, 165, 255)
+        perclos_text = f"PERCLOS: {status['perclos_percentage']:.1f}%"
+        cv2.putText(frame, perclos_text, (10, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, perclos_color, 2)
+        y_offset += line_height
+
+        # 4. 闭眼时长（仅在闭眼时显示）
+        if status['eye_closed_duration'] > 0.5:
+            closed_color = (0, 0, 255) if status['is_drowsy'] else (0, 165, 255)
+            closed_text = f"Closed: {status['eye_closed_duration']:.1f}s"
+            cv2.putText(frame, closed_text, (10, y_offset),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, closed_color, 2)
+            y_offset += line_height
+
+        # 5. 疲劳等级（大字显示）
+        fatigue_level = status['fatigue_level']
+        fatigue_color = fatigue_colors.get(fatigue_level, (255, 255, 255))
+        fatigue_text = f"Status: {status['fatigue_description']}"
+        cv2.putText(frame, fatigue_text, (10, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, fatigue_color, 2)
+
+        # 6. 打瞌睡警告（屏幕中央）
+        if status['is_drowsy']:
+            warning_text = "! DROWSINESS ALERT !"
+            text_size = cv2.getTextSize(warning_text, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 3)[0]
+            text_x = (w - text_size[0]) // 2
+            text_y = h - 60
+
+            # 绘制背景矩形
+            padding = 10
+            cv2.rectangle(frame,
+                         (text_x - padding, text_y - text_size[1] - padding),
+                         (text_x + text_size[0] + padding, text_y + padding),
+                         (0, 0, 255), -1)
+
+            # 绘制警告文本
+            cv2.putText(frame, warning_text, (text_x, text_y),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3)
+
+        # 7. 疲劳等级指示条（右上角）
+        if fatigue_level > 0:
+            bar_width = 200
+            bar_height = 20
+            bar_x = w - bar_width - 20
+            bar_y = 50
+
+            # 背景
+            cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_width, bar_y + bar_height),
+                         (100, 100, 100), -1)
+
+            # 疲劳等级填充
+            fill_width = int(bar_width * (fatigue_level / 3))
+            cv2.rectangle(frame, (bar_x, bar_y), (bar_x + fill_width, bar_y + bar_height),
+                         fatigue_color, -1)
+
+            # 边框
+            cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_width, bar_y + bar_height),
+                         (255, 255, 255), 2)
 
     def cleanup(self):
         """清理资源"""
