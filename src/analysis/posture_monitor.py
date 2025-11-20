@@ -126,24 +126,51 @@ class PostureMonitor:
         """
         将旋转向量转换为欧拉角
 
+        参考：https://learnopencv.com/head-pose-estimation-using-opencv-and-dlib/
+        使用实测数据验证的欧拉角提取方法
+
         Args:
             rotation_vector: 旋转向量
 
         Returns:
             (pitch, yaw, roll) 俯仰角、偏航角、翻滚角（度）
+            - pitch: 俯仰角，低头为正，仰头为负
+            - yaw: 偏航角，左转为负，右转为正
+            - roll: 翻滚角，左倾为负，右倾为正
         """
         # 转换为旋转矩阵
         rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
 
-        # 使用OpenCV的RQDecomp3x3分解旋转矩阵
-        # 这是专门用于从旋转矩阵提取欧拉角的函数
-        euler_angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotation_matrix)
+        # 从旋转矩阵提取欧拉角（使用YXZ旋转顺序）
+        # 参考：https://www.learnopencv.com/rotation-matrix-to-euler-angles/
 
-        # RQDecomp3x3返回的角度已经是度数
-        # 返回格式：[pitch, yaw, roll]
-        pitch = euler_angles[0]
-        yaw = euler_angles[1]
-        roll = euler_angles[2]
+        # 计算sy用于判断是否接近万向锁
+        sy = math.sqrt(rotation_matrix[0, 0] * rotation_matrix[0, 0] +
+                      rotation_matrix[1, 0] * rotation_matrix[1, 0])
+
+        singular = sy < 1e-6  # 如果接近0，处于万向锁状态
+
+        if not singular:
+            # 正常情况
+            # Pitch (X轴旋转) - 俯仰角
+            pitch = math.atan2(-rotation_matrix[2, 0], sy)
+
+            # Yaw (Y轴旋转) - 偏航角
+            yaw = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+
+            # Roll (Z轴旋转) - 翻滚角
+            roll = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+        else:
+            # 万向锁情况
+            pitch = math.atan2(-rotation_matrix[2, 0], sy)
+            yaw = math.atan2(-rotation_matrix[0, 1], rotation_matrix[1, 1])
+            roll = 0
+
+        # 转换为度并调整符号以匹配直观理解
+        # 根据实际测试：低头时pitch应该为正，仰头为负
+        pitch = -math.degrees(pitch)  # 取反以匹配直观理解
+        yaw = math.degrees(yaw)
+        roll = math.degrees(roll)
 
         return pitch, yaw, roll
 
