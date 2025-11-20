@@ -291,12 +291,12 @@ class FatigueAnalyzer:
     def _get_fatigue_description(self) -> str:
         """获取疲劳等级描述"""
         descriptions = {
-            0: "正常",
-            1: "轻度疲劳",
-            2: "中度疲劳",
-            3: "重度疲劳"
+            0: "Normal",
+            1: "Mild Fatigue",
+            2: "Moderate Fatigue",
+            3: "Severe Fatigue"
         }
-        return descriptions.get(self.fatigue_level, "未知")
+        return descriptions.get(self.fatigue_level, "Unknown")
 
     def reset(self):
         """重置所有状态"""
