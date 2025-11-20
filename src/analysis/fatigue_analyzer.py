@@ -54,6 +54,7 @@ class FatigueAnalyzer:
         self.is_blinking = False
         self.last_blink_time = time.time()
         self.blinks_per_minute = 0
+        self.blink_window_start = time.time()  # 统计窗口开始时间
 
         # PERCLOS计算（使用滑动窗口）
         self.eye_state_history = deque(maxlen=perclos_window * 30)  # 假设30fps
@@ -168,18 +169,23 @@ class FatigueAnalyzer:
         if is_closed and not self.is_blinking:
             self.is_blinking = True
             self.blink_counter += 1
-            self.last_blink_time = timestamp
 
         # 检测睁眼：从闭眼到睁眼的转换
         elif not is_closed and self.is_blinking:
             self.is_blinking = False
 
-        # 计算每分钟眨眼次数（滑动窗口：最近60秒）
-        # 简化实现：每10秒更新一次统计
-        if timestamp - self.last_blink_time > 60:
+        # 计算每分钟眨眼次数（每60秒重置一次统计窗口）
+        window_duration = timestamp - self.blink_window_start
+        if window_duration >= 60:
+            # 计算过去60秒的眨眼频率
             self.blinks_per_minute = self.blink_counter
+            # 重置计数器和窗口
             self.blink_counter = 0
-            self.last_blink_time = timestamp
+            self.blink_window_start = timestamp
+        else:
+            # 实时估算当前频率（按比例缩放到每分钟）
+            if window_duration > 0:
+                self.blinks_per_minute = int((self.blink_counter / window_duration) * 60)
 
     def _update_perclos(self, is_closed: bool):
         """
@@ -247,9 +253,13 @@ class FatigueAnalyzer:
             self.fatigue_level = 2
 
         # 轻度疲劳
-        elif (self.perclos_value > 0.10 or
-              self.blinks_per_minute < self.blink_min or
-              self.blinks_per_minute > self.blink_max):
+        # 注意：只有统计窗口超过10秒后，才考虑眨眼频率异常
+        window_duration = time.time() - self.blink_window_start
+        blink_freq_abnormal = (window_duration > 10 and
+                               (self.blinks_per_minute < self.blink_min or
+                                self.blinks_per_minute > self.blink_max))
+
+        if self.perclos_value > 0.10 or blink_freq_abnormal:
             self.fatigue_level = 1
 
         # 正常
@@ -302,6 +312,8 @@ class FatigueAnalyzer:
         """重置所有状态"""
         self.blink_counter = 0
         self.is_blinking = False
+        self.blinks_per_minute = 0
+        self.blink_window_start = time.time()
         self.eye_state_history.clear()
         self.perclos_value = 0.0
         self.eye_closed_start = None
