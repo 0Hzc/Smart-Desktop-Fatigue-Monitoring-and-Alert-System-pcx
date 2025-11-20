@@ -29,7 +29,7 @@ distance:
   warning_distance: 50  # 警告距离（厘米）
   warning_duration: 30  # 持续时长触发提醒（秒）
   known_face_width: 14.5  # 平均人脸宽度（厘米）
-  focal_length: 600  # 摄像头焦距（需校准）
+  focal_length: 603.4  # 摄像头焦距（需校准）
 
 # 坐姿监测参数
 posture:

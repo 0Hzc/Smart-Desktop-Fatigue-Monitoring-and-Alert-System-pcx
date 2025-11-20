@@ -18,10 +18,10 @@ class PostureMonitor:
 
     def __init__(
         self,
-        pitch_threshold_down: float = 30.0,
-        pitch_threshold_up: float = -15.0,
+        pitch_threshold_down: float = 20.0,
+        pitch_threshold_up: float = -5.0,
         warning_duration: float = 60.0,
-        focal_length: float = 600.0,
+        focal_length: float = 603.4,
         image_width: int = 640,
         image_height: int = 480
     ):
