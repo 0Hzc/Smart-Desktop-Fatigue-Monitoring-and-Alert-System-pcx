@@ -172,10 +172,17 @@ class PostureMonitor:
 
         # 根据实测结果，重新映射：
         # - 实测：左右偏头改变了标准公式的y值 → y实际是roll
-        # - 实测：上下点头没反应，应该改变标准公式的x值 → x实际是pitch
+        # - 实测：上下点头改变了标准公式的x值 → x实际是pitch
         # - 实测：Yaw接近180° → z需要反转
 
         pitch = -x  # X轴旋转对应pitch，取反使低头为正
+
+        # Pitch值可能在±180°附近，需要映射到±90°范围
+        if pitch > 90:
+            pitch = 180 - pitch  # 将90-180°映射到90-0°
+        elif pitch < -90:
+            pitch = -180 - pitch  # 将-90到-180°映射到-90到0°
+
         yaw = z - 180  # Z轴旋转对应yaw，减180°修正偏差
         roll = y  # Y轴旋转对应roll
 
