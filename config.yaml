@@ -33,8 +33,8 @@ distance:
 
 # 坐姿监测参数
 posture:
-  pitch_threshold_down: 30  # 低头角度阈值（度）
-  pitch_threshold_up: -15   # 仰头角度阈值（度）
+  pitch_threshold_down: 12  # 低头角度阈值（度）- 根据实测数据调整
+  pitch_threshold_up: -8   # 仰头角度阈值（度）- 根据实测数据调整
   warning_duration: 60  # 持续时长触发提醒（秒）
 
 # 提醒配置
