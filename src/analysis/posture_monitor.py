@@ -133,7 +133,7 @@ class PostureMonitor:
         """
         将旋转向量转换为欧拉角
 
-        使用标准的XYZ欧拉角提取方法（Tait-Bryan angles）
+        使用标准的XYZ欧拉角提取方法，并根据实测调整轴映射
 
         Args:
             rotation_vector: 旋转向量
@@ -150,33 +150,42 @@ class PostureMonitor:
         # 使用标准的XYZ欧拉角提取公式
         # 参考: https://www.gregslabaugh.net/publications/euler.pdf
 
-        # 检查是否接近万向锁 (当R[2,0] 接近 ±1)
+        # 检查是否接近万向锁
         sy = math.sqrt(rotation_matrix[0, 0]**2 + rotation_matrix[1, 0]**2)
-
         singular = sy < 1e-6
 
         if not singular:
-            # 正常情况 - 使用标准公式
-            # Roll (绕X轴) - 头部左右倾斜
-            roll = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
-
-            # Pitch (绕Y轴) - 头部上下点头
-            pitch = math.atan2(-rotation_matrix[2, 0], sy)
-
-            # Yaw (绕Z轴) - 头部左右摇头
-            yaw = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+            # 正常情况
+            x = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+            y = math.atan2(-rotation_matrix[2, 0], sy)
+            z = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
         else:
             # 万向锁情况
-            roll = math.atan2(-rotation_matrix[1, 2], rotation_matrix[1, 1])
-            pitch = math.atan2(-rotation_matrix[2, 0], sy)
-            yaw = 0
+            x = math.atan2(-rotation_matrix[1, 2], rotation_matrix[1, 1])
+            y = math.atan2(-rotation_matrix[2, 0], sy)
+            z = 0
 
         # 转换为度
-        pitch_deg = math.degrees(pitch)
-        yaw_deg = math.degrees(yaw)
-        roll_deg = math.degrees(roll)
+        x = math.degrees(x)
+        y = math.degrees(y)
+        z = math.degrees(z)
 
-        return pitch_deg, yaw_deg, roll_deg
+        # 根据实测结果，重新映射：
+        # - 实测：左右偏头改变了标准公式的y值 → y实际是roll
+        # - 实测：上下点头没反应，应该改变标准公式的x值 → x实际是pitch
+        # - 实测：Yaw接近180° → z需要反转
+
+        pitch = -x  # X轴旋转对应pitch，取反使低头为正
+        yaw = z - 180  # Z轴旋转对应yaw，减180°修正偏差
+        roll = y  # Y轴旋转对应roll
+
+        # 将yaw标准化到[-180, 180]
+        if yaw < -180:
+            yaw += 360
+        elif yaw > 180:
+            yaw -= 360
+
+        return pitch, yaw, roll
 
     def update(
         self,
