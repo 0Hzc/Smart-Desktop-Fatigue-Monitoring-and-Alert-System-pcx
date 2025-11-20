@@ -88,6 +88,10 @@ class ConfigLoader:
         """获取提醒配置"""
         return self.config.get('alert', {})
 
+    def get_led_config(self) -> Dict[str, Any]:
+        """获取LED配置"""
+        return self.config.get('led', {})
+
     def get_performance_config(self) -> Dict[str, Any]:
         """获取性能配置"""
         return self.config.get('performance', {})

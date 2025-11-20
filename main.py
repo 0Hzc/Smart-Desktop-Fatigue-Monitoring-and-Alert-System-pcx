@@ -16,6 +16,10 @@ from analysis.fatigue_analyzer import FatigueAnalyzer
 from analysis.distance_monitor import DistanceMonitor
 from analysis.posture_monitor import PostureMonitor
 from utils.config_loader import get_config
+from alert.alert_manager import AlertManager, AlertType, AlertLevel
+from alert.voice_alert import VoiceAlert
+from alert.led_alert import LEDAlert
+from alert.gui_alert import GUIAlert
 
 
 class FatigueMonitorSystem:
@@ -93,6 +97,32 @@ class FatigueMonitorSystem:
         self.perf_config = self.config.get_performance_config()
         self.skip_frames = self.perf_config['skip_frames']
         self.display_fps = self.perf_config['display_fps']
+
+        # 初始化提醒系统
+        alert_config = self.config.get_alert_config()
+        self.alert_manager = AlertManager(
+            enable_voice=alert_config['enable_voice'],
+            enable_led=alert_config['enable_led'],
+            enable_gui=alert_config['enable_gui'],
+            cooldown_time=alert_config['cooldown_time']
+        )
+
+        # 初始化各类提醒器
+        if alert_config['enable_voice']:
+            voice_alert = VoiceAlert(rate=150, volume=0.9)
+            self.alert_manager.set_voice_alert(voice_alert)
+
+        if alert_config['enable_led']:
+            led_config = self.config.get_led_config()
+            led_alert = LEDAlert(
+                pin=led_config['pin'],
+                blink_duration=led_config['blink_duration']
+            )
+            self.alert_manager.set_led_alert(led_alert)
+
+        if alert_config['enable_gui']:
+            gui_alert = GUIAlert(auto_close_delay=5.0)
+            self.alert_manager.set_gui_alert(gui_alert)
 
         # 帧计数器
         self.frame_counter = 0
@@ -192,6 +222,9 @@ class FatigueMonitorSystem:
 
                         # === 坐姿监测 ===
                         posture_status = self.posture_monitor.update(landmarks_array)
+
+                        # === 提醒触发 ===
+                        self._check_and_trigger_alerts(fatigue_status, distance_status, posture_status)
 
                         # 显示所有分析结果
                         self._draw_analysis_info(
@@ -403,11 +436,56 @@ class FatigueMonitorSystem:
         cv2.putText(frame, score_text, (bar_x + bar_width // 2 - 30, bar_y + 18),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
+    def _check_and_trigger_alerts(self, fatigue_status: dict, distance_status: dict, posture_status: dict):
+        """
+        检查并触发提醒
+
+        Args:
+            fatigue_status: 疲劳状态字典
+            distance_status: 距离状态字典
+            posture_status: 坐姿状态字典
+        """
+        # 检查严重疲劳（最高优先级）
+        if fatigue_status['fatigue_level'] == 3:
+            self.alert_manager.trigger_alert(
+                AlertType.SEVERE_FATIGUE,
+                "Severe fatigue detected! Please rest immediately.",
+                AlertLevel.CRITICAL
+            )
+            return  # 严重疲劳时不再检查其他提醒
+
+        # 检查一般疲劳
+        if fatigue_status['fatigue_level'] >= 1:
+            fatigue_desc = fatigue_status['fatigue_description']
+            self.alert_manager.trigger_alert(
+                AlertType.FATIGUE,
+                f"{fatigue_desc}. Please take a break to rest.",
+                AlertLevel.WARNING
+            )
+
+        # 检查距离过近
+        if distance_status['is_too_close']:
+            self.alert_manager.trigger_alert(
+                AlertType.DISTANCE,
+                "You are too close to the screen. Please move back.",
+                AlertLevel.WARNING
+            )
+
+        # 检查坐姿不良
+        if posture_status['is_bad_posture']:
+            posture_type = posture_status['posture_type']
+            self.alert_manager.trigger_alert(
+                AlertType.POSTURE,
+                f"Poor posture detected: {posture_type}. Please adjust your sitting position.",
+                AlertLevel.WARNING
+            )
+
     def cleanup(self):
         """清理资源"""
         print("\n清理资源...")
         self.face_detector.close()
         self.camera.release()
+        self.alert_manager.cleanup()
         cv2.destroyAllWindows()
         print("✓ 系统已关闭")
 
