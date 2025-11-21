@@ -1,12 +1,12 @@
 """
 提醒模块
-包含多种提醒方式：语音、LED、GUI弹窗、Web提醒、蜂鸣器
+包含多种提醒方式：语音、LED、Web提醒、蜂鸣器
+注意：传统GUI提醒已移除，改用Web界面
 """
 
 from .alert_manager import AlertManager, AlertType, AlertLevel
 from .voice_alert import VoiceAlert
 from .led_alert import LEDAlert
-from .gui_alert import GUIAlert
 from .web_alert import WebAlert
 from .buzzer_alert import BuzzerAlert
 
@@ -16,7 +16,6 @@ __all__ = [
     'AlertLevel',
     'VoiceAlert',
     'LEDAlert',
-    'GUIAlert',
     'WebAlert',
     'BuzzerAlert'
 ]

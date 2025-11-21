@@ -1,6 +1,7 @@
 """
 提醒管理器模块
-功能：统一管理多种提醒方式（语音、LED、GUI），防止频繁提醒
+功能：统一管理多种提醒方式（语音、LED），防止频繁提醒
+注意：GUI提醒已移除，改用Web界面
 """
 
 import time
@@ -31,7 +32,6 @@ class AlertManager:
         self,
         enable_voice: bool = True,
         enable_led: bool = False,
-        enable_gui: bool = True,
         cooldown_time: float = 300.0
     ):
         """
@@ -40,18 +40,15 @@ class AlertManager:
         Args:
             enable_voice: 是否启用语音提醒
             enable_led: 是否启用LED提醒
-            enable_gui: 是否启用GUI提醒
             cooldown_time: 冷却时间（秒），防止频繁提醒
         """
         self.enable_voice = enable_voice
         self.enable_led = enable_led
-        self.enable_gui = enable_gui
         self.cooldown_time = cooldown_time
 
         # 各类提醒器
         self.voice_alert = None
         self.led_alert = None
-        self.gui_alert = None
 
         # 冷却时间跟踪（记录每种提醒类型的上次触发时间）
         self.last_alert_time: Dict[AlertType, float] = {}
@@ -62,7 +59,6 @@ class AlertManager:
         print("✓ 提醒管理器初始化完成")
         print(f"  - 语音提醒: {'启用' if enable_voice else '禁用'}")
         print(f"  - LED提醒: {'启用' if enable_led else '禁用'}")
-        print(f"  - GUI提醒: {'启用' if enable_gui else '禁用'}")
         print(f"  - 冷却时间: {cooldown_time}秒")
 
     def set_voice_alert(self, voice_alert):
@@ -74,11 +70,6 @@ class AlertManager:
         """设置LED提醒器"""
         self.led_alert = led_alert
         print("✓ LED提醒器已注册")
-
-    def set_gui_alert(self, gui_alert):
-        """设置GUI提醒器"""
-        self.gui_alert = gui_alert
-        print("✓ GUI提醒器已注册")
 
     def can_alert(self, alert_type: AlertType) -> bool:
         """
@@ -131,10 +122,6 @@ class AlertManager:
         if self.enable_led and self.led_alert:
             Thread(target=self._trigger_led, args=(level,), daemon=True).start()
 
-        # GUI提醒
-        if self.enable_gui and self.gui_alert:
-            Thread(target=self._trigger_gui, args=(alert_type, message, level), daemon=True).start()
-
     def _trigger_voice(self, message: str):
         """触发语音提醒（后台线程）"""
         try:
@@ -148,13 +135,6 @@ class AlertManager:
             self.led_alert.blink(level)
         except Exception as e:
             print(f"✗ LED提醒失败: {e}")
-
-    def _trigger_gui(self, alert_type: AlertType, message: str, level: AlertLevel):
-        """触发GUI提醒（后台线程）"""
-        try:
-            self.gui_alert.show(alert_type, message, level)
-        except Exception as e:
-            print(f"✗ GUI提醒失败: {e}")
 
     def reset_cooldown(self, alert_type: Optional[AlertType] = None):
         """

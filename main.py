@@ -19,7 +19,6 @@ from utils.config_loader import get_config
 from alert.alert_manager import AlertManager, AlertType, AlertLevel
 from alert.voice_alert import VoiceAlert
 from alert.led_alert import LEDAlert
-from alert.gui_alert import GUIAlert
 
 
 class FatigueMonitorSystem:
@@ -103,7 +102,6 @@ class FatigueMonitorSystem:
         self.alert_manager = AlertManager(
             enable_voice=alert_config['enable_voice'],
             enable_led=alert_config['enable_led'],
-            enable_gui=alert_config['enable_gui'],
             cooldown_time=alert_config['cooldown_time']
         )
 
@@ -119,10 +117,6 @@ class FatigueMonitorSystem:
                 blink_duration=led_config['blink_duration']
             )
             self.alert_manager.set_led_alert(led_alert)
-
-        if alert_config['enable_gui']:
-            gui_alert = GUIAlert(auto_close_delay=5.0)
-            self.alert_manager.set_gui_alert(gui_alert)
 
         # 帧计数器
         self.frame_counter = 0
