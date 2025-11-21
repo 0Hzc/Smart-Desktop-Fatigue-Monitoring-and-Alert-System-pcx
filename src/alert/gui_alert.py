@@ -1,10 +1,18 @@
 """
 GUI弹窗提醒模块
 功能：使用Tkinter创建美观的提醒弹窗
+如果tkinter不可用，自动降级为print模拟模式
 """
 
-import tkinter as tk
-from tkinter import messagebox
+# 尝试导入tkinter，如果不可用则使用模拟模式
+try:
+    import tkinter as tk
+    from tkinter import messagebox
+    TKINTER_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    TKINTER_AVAILABLE = False
+    print("注意：tkinter不可用，GUI提醒将在模拟模式下运行（使用print输出）")
+
 from threading import Thread
 import time
 
@@ -21,6 +29,7 @@ class GUIAlert:
         """
         self.auto_close_delay = auto_close_delay
         self.current_window = None
+        self.simulate = not TKINTER_AVAILABLE
 
         # 颜色主题
         self.colors = {
@@ -44,8 +53,12 @@ class GUIAlert:
             'severe': "Severe Fatigue Warning!\n\nImmediate rest required! You've been working too long without a break."
         }
 
-        print("✓ GUI提醒器初始化成功")
-        print(f"  - 自动关闭延迟: {auto_close_delay}秒" if auto_close_delay > 0 else "  - 手动关闭模式")
+        if self.simulate:
+            print("✓ GUI提醒器初始化成功（模拟模式）")
+            print("  - 模式: print输出模拟")
+        else:
+            print("✓ GUI提醒器初始化成功")
+            print(f"  - 自动关闭延迟: {auto_close_delay}秒" if auto_close_delay > 0 else "  - 手动关闭模式")
 
     def show(self, alert_type, message: str, level):
         """
@@ -56,15 +69,35 @@ class GUIAlert:
             message: 提醒消息
             level: 提醒级别
         """
-        # 确定样式
-        level_name = 'info' if level.value == 1 else ('warning' if level.value == 2 else 'critical')
-        color_theme = self.colors[level_name]
+        if self.simulate:
+            # 模拟模式：使用print输出
+            self._simulate_alert(alert_type, message, level)
+        else:
+            # 实际模式：显示GUI窗口
+            # 确定样式
+            level_name = 'info' if level.value == 1 else ('warning' if level.value == 2 else 'critical')
+            color_theme = self.colors[level_name]
 
-        # 在主线程中创建窗口
-        self._create_alert_window(message, color_theme, level_name)
+            # 在主线程中创建窗口
+            self._create_alert_window(message, color_theme, level_name)
+
+    def _simulate_alert(self, alert_type, message: str, level):
+        """模拟GUI提醒（使用print）"""
+        level_name = 'INFO' if level.value == 1 else ('WARNING' if level.value == 2 else 'CRITICAL')
+        icon = self.icons.get('info' if level.value == 1 else ('warning' if level.value == 2 else 'critical'), '⚠️')
+
+        print("\n" + "=" * 60)
+        print(f"[GUI提醒模拟] {icon} {level_name}")
+        print("=" * 60)
+        print(f"类型: {alert_type.value if hasattr(alert_type, 'value') else alert_type}")
+        print(f"消息: {message}")
+        print("=" * 60 + "\n")
 
     def _create_alert_window(self, message: str, color_theme: dict, level_name: str):
         """创建提醒窗口"""
+        if self.simulate:
+            return
+
         # 创建顶层窗口
         window = tk.Toplevel()
         self.current_window = window
@@ -97,26 +130,27 @@ class GUIAlert:
             bg=color_theme['bg'],
             fg=color_theme['fg'],
             wraplength=350,
-            justify=tk.CENTER
+            justify='center'
         )
-        message_label.pack(pady=10)
+        message_label.pack(pady=(0, 20))
 
-        # 关闭按钮
+        # 确定按钮
         close_button = tk.Button(
             window,
-            text="I Understand",
-            command=window.destroy,
-            font=("Arial", 11, "bold"),
+            text="OK",
+            font=("Arial", 12, "bold"),
             bg=color_theme['fg'],
-            fg="white",
-            padx=20,
-            pady=10,
-            relief=tk.FLAT,
-            cursor="hand2"
+            fg='white',
+            activebackground=color_theme['fg'],
+            activeforeground='white',
+            relief='flat',
+            cursor='hand2',
+            width=10,
+            command=window.destroy
         )
-        close_button.pack(pady=20)
+        close_button.pack(pady=(0, 20))
 
-        # 自动关闭计时器
+        # 自动关闭
         if self.auto_close_delay > 0:
             window.after(int(self.auto_close_delay * 1000), window.destroy)
 
@@ -126,62 +160,63 @@ class GUIAlert:
         y = (window.winfo_screenheight() // 2) - (window.winfo_height() // 2)
         window.geometry(f"+{x}+{y}")
 
-        print(f"✓ GUI提醒窗口已显示: {message[:30]}...")
+    def close_current(self):
+        """关闭当前打开的提醒窗口"""
+        if self.simulate:
+            print("[GUI提醒模拟] 关闭提醒窗口")
+            return
 
-    def show_simple_message(self, title: str, message: str, msg_type: str = "info"):
-        """
-        显示简单消息框（阻塞式）
+        if self.current_window:
+            try:
+                self.current_window.destroy()
+                self.current_window = None
+            except:
+                pass
 
-        Args:
-            title: 标题
-            message: 消息
-            msg_type: 消息类型（'info', 'warning', 'error'）
-        """
-        if msg_type == "info":
-            messagebox.showinfo(title, message)
-        elif msg_type == "warning":
-            messagebox.showwarning(title, message)
-        elif msg_type == "error":
-            messagebox.showerror(title, message)
-
-    def test(self):
-        """测试GUI提醒"""
-        print("\n=== GUI提醒器测试 ===\n")
-
-        # 创建根窗口（隐藏）
-        root = tk.Tk()
-        root.withdraw()
-
-        from alert_manager import AlertType, AlertLevel
-
-        # 测试不同级别的提醒
-        test_cases = [
-            (AlertType.FATIGUE, self.messages['fatigue'], AlertLevel.WARNING),
-            (AlertType.DISTANCE, self.messages['distance'], AlertLevel.WARNING),
-            (AlertType.POSTURE, self.messages['posture'], AlertLevel.WARNING),
-            (AlertType.FATIGUE, self.messages['severe'], AlertLevel.CRITICAL)
-        ]
-
-        for i, (alert_type, message, level) in enumerate(test_cases, 1):
-            print(f"\n测试 {i}/{len(test_cases)}: {alert_type.value}")
-            self.show(alert_type, message, level)
-            time.sleep(self.auto_close_delay + 1)
-
-        root.destroy()
-        print("\n✓ GUI测试完成")
+    def cleanup(self):
+        """清理资源"""
+        self.close_current()
+        if not self.simulate:
+            print("✓ GUI提醒器已清理")
 
 
 def test_gui_alert():
     """测试GUI提醒器"""
-    print("=== GUI提醒器独立测试 ===\n")
+    print("=== GUI提醒器测试 ===\n")
 
     # 初始化
     gui = GUIAlert(auto_close_delay=3.0)
 
-    # 运行测试
-    gui.test()
+    if TKINTER_AVAILABLE:
+        # 创建主窗口（tkinter需要主窗口）
+        root = tk.Tk()
+        root.withdraw()  # 隐藏主窗口
 
-    print("\n测试结束")
+    print("\n测试不同级别的提醒...")
+
+    # 测试信息级别
+    print("\n1. 测试信息级别提醒")
+    from alert.alert_manager import AlertType, AlertLevel
+    gui.show(AlertType.FATIGUE, "This is a test information message", AlertLevel.INFO)
+    time.sleep(4)
+
+    # 测试警告级别
+    print("\n2. 测试警告级别提醒")
+    gui.show(AlertType.DISTANCE, "This is a test warning message", AlertLevel.WARNING)
+    time.sleep(4)
+
+    # 测试严重级别
+    print("\n3. 测试严重级别提醒")
+    gui.show(AlertType.POSTURE, "This is a test critical message", AlertLevel.CRITICAL)
+    time.sleep(4)
+
+    # 清理
+    gui.cleanup()
+
+    if TKINTER_AVAILABLE:
+        root.destroy()
+
+    print("\n✓ 测试完成")
 
 
 if __name__ == "__main__":
