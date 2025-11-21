@@ -50,12 +50,12 @@ echo "============================================"
 
 # 1. 更新软件源
 echo ""
-echo "📦 [1/7] 更新软件源..."
+echo "📦 [1/6] 更新软件源..."
 sudo apt-get update
 
 # 2. 安装编译工具链
 echo ""
-echo "🔧 [2/7] 安装编译工具链..."
+echo "🔧 [2/6] 安装编译工具链..."
 sudo apt-get install -y build-essential python3-dev python3-pip cmake pkg-config
 if [ $? -eq 0 ]; then
     echo "✅ 编译工具链安装完成"
@@ -66,7 +66,7 @@ fi
 
 # 3. 安装OpenCV系统依赖
 echo ""
-echo "🎨 [3/7] 安装OpenCV系统依赖..."
+echo "🎨 [3/6] 安装OpenCV系统依赖..."
 sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 libgtk-3-0
 if [ $? -eq 0 ]; then
     echo "✅ OpenCV系统依赖安装完成"
@@ -77,7 +77,7 @@ fi
 
 # 4. 安装摄像头支持
 echo ""
-echo "📷 [4/7] 安装摄像头支持..."
+echo "📷 [4/6] 安装摄像头支持..."
 sudo apt-get install -y v4l-utils libv4l-dev
 if [ $? -eq 0 ]; then
     echo "✅ 摄像头支持安装完成"
@@ -88,8 +88,8 @@ fi
 
 # 5. 安装音频系统
 echo ""
-echo "🔊 [5/7] 安装音频系统（语音播报）..."
-sudo apt-get install -y espeak espeak-data libespeak-dev libportaudio2 portaudio19-dev alsa-utils pulseaudio
+echo "🔊 [5/6] 安装音频系统（语音播报）..."
+sudo apt-get install -y espeak espeak-data libespeak-dev alsa-utils pulseaudio
 if [ $? -eq 0 ]; then
     echo "✅ 音频系统安装完成"
 else
@@ -97,20 +97,9 @@ else
     exit 1
 fi
 
-# 6. 安装科学计算库依赖
+# 6. 清理
 echo ""
-echo "🔬 [6/7] 安装科学计算库依赖..."
-sudo apt-get install -y libatlas-base-dev libhdf5-dev
-if [ $? -eq 0 ]; then
-    echo "✅ 科学计算库依赖安装完成"
-else
-    echo "❌ 科学计算库依赖安装失败"
-    exit 1
-fi
-
-# 7. 清理
-echo ""
-echo "🧹 [7/7] 清理缓存..."
+echo "🧹 [6/6] 清理缓存..."
 sudo apt-get autoremove -y
 sudo apt-get autoclean
 echo "✅ 清理完成"
