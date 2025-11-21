@@ -18,8 +18,8 @@ Flask-SocketIO==5.3.5
 python-socketio==5.10.0
 python-engineio==4.8.0
 
-# 语音播报（pyttsx3在Linux需要espeak系统依赖）
-pyttsx3==2.90
+# 语音播报（直接使用espeak，无需Python包）
+# 注意：需要系统安装espeak：sudo apt-get install -y espeak espeak-data
 
 # 配置文件解析
 PyYAML==6.0.1
