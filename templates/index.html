@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能桌面疲劳监测系统 - Web界面</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .video-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #video-stream {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            background: rgba(0,0,0,0.6);
+            color: white;
+        }
+
+        .status-connected {
+            background: rgba(76, 175, 80, 0.8) !important;
+        }
+
+        .status-disconnected {
+            background: rgba(244, 67, 54, 0.8) !important;
+        }
+
+        .status-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .status-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .status-value {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .status-normal {
+            color: #4CAF50;
+        }
+
+        .status-warning {
+            color: #FF9800;
+        }
+
+        .status-danger {
+            color: #F44336;
+        }
+
+        /* 提醒弹窗样式 */
+        .alert-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .alert-content {
+            position: relative;
+            margin: 15% auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        @keyframes slideDown {
+            from {transform: translateY(-50px); opacity: 0;}
+            to {transform: translateY(0); opacity: 1;}
+        }
+
+        .alert-icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .alert-title {
+            font-size: 1.8em;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .alert-message {
+            font-size: 1.1em;
+            text-align: center;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .alert-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .alert-button:hover {
+            background: #5568d3;
+        }
+
+        .alert-warning .alert-title {
+            color: #FF9800;
+        }
+
+        .alert-critical .alert-title {
+            color: #F44336;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 智能桌面疲劳监测系统</h1>
+            <p>实时监测您的健康状态 | Raspberry Pi 4B</p>
+        </div>
+
+        <div class="main-content">
+            <!-- 视频面板 -->
+            <div class="video-panel">
+                <div class="video-container">
+                    <img id="video-stream" src="{{ url_for('video_feed') }}" alt="视频流加载中...">
+                    <div id="connection-status" class="connection-status status-disconnected">
+                        ● 未连接
+                    </div>
+                </div>
+            </div>
+
+            <!-- 状态面板 -->
+            <div class="status-panel">
+                <!-- 疲劳状态 -->
+                <div class="status-card">
+                    <h3>😴 疲劳状态</h3>
+                    <div class="status-item">
+                        <span class="status-label">状态:</span>
+                        <span id="fatigue-status" class="status-value status-normal">正常</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">EAR:</span>
+                        <span id="fatigue-ear" class="status-value">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">PERCLOS:</span>
+                        <span id="fatigue-perclos" class="status-value">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">眨眼频率:</span>
+                        <span id="fatigue-blink" class="status-value">--</span>
+                    </div>
+                </div>
+
+                <!-- 距离监测 -->
+                <div class="status-card">
+                    <h3>📏 距离监测</h3>
+                    <div class="status-item">
+                        <span class="status-label">距离:</span>
+                        <span id="distance-value" class="status-value status-normal">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">状态:</span>
+                        <span id="distance-status" class="status-value status-normal">正常</span>
+                    </div>
+                </div>
+
+                <!-- 坐姿监测 -->
+                <div class="status-card">
+                    <h3>🪑 坐姿监测</h3>
+                    <div class="status-item">
+                        <span class="status-label">Pitch:</span>
+                        <span id="posture-pitch" class="status-value">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Yaw:</span>
+                        <span id="posture-yaw" class="status-value">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Roll:</span>
+                        <span id="posture-roll" class="status-value">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">状态:</span>
+                        <span id="posture-status" class="status-value status-normal">正常</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提醒弹窗 -->
+    <div id="alert-modal" class="alert-modal">
+        <div id="alert-content" class="alert-content">
+            <div id="alert-icon" class="alert-icon"></div>
+            <div id="alert-title" class="alert-title"></div>
+            <div id="alert-message" class="alert-message"></div>
+            <button class="alert-button" onclick="closeAlert()">我知道了</button>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket连接
+        const socket = io();
+
+        // 连接事件
+        socket.on('connect', function() {
+            console.log('WebSocket已连接');
+            document.getElementById('connection-status').className = 'connection-status status-connected';
+            document.getElementById('connection-status').textContent = '● 已连接';
+        });
+
+        socket.on('disconnect', function() {
+            console.log('WebSocket已断开');
+            document.getElementById('connection-status').className = 'connection-status status-disconnected';
+            document.getElementById('connection-status').textContent = '● 未连接';
+        });
+
+        // 接收状态更新
+        socket.on('status_update', function(data) {
+            updateFatigueStatus(data.fatigue);
+            updateDistanceStatus(data.distance);
+            updatePostureStatus(data.posture);
+        });
+
+        // 接收提醒
+        socket.on('alert', function(data) {
+            showAlert(data);
+            playVoice(data.voice_text);  // Web语音播放
+        });
+
+        // 更新疲劳状态
+        function updateFatigueStatus(fatigue) {
+            const statusElem = document.getElementById('fatigue-status');
+            statusElem.textContent = fatigue.description;
+
+            // 根据级别设置颜色
+            statusElem.className = 'status-value ' +
+                (fatigue.level === 0 ? 'status-normal' :
+                 fatigue.level === 1 ? 'status-warning' :
+                 'status-danger');
+
+            document.getElementById('fatigue-ear').textContent = fatigue.ear;
+            document.getElementById('fatigue-perclos').textContent = fatigue.perclos + '%';
+            document.getElementById('fatigue-blink').textContent = fatigue.blink_rate + ' /min';
+        }
+
+        // 更新距离状态
+        function updateDistanceStatus(distance) {
+            document.getElementById('distance-value').textContent = distance.value + ' cm';
+
+            const statusElem = document.getElementById('distance-status');
+            if (distance.is_too_close) {
+                statusElem.textContent = '过近！';
+                statusElem.className = 'status-value status-danger';
+            } else {
+                statusElem.textContent = '正常';
+                statusElem.className = 'status-value status-normal';
+            }
+        }
+
+        // 更新坐姿状态
+        function updatePostureStatus(posture) {
+            document.getElementById('posture-pitch').textContent = posture.pitch + '°';
+            document.getElementById('posture-yaw').textContent = posture.yaw + '°';
+            document.getElementById('posture-roll').textContent = posture.roll + '°';
+
+            const statusElem = document.getElementById('posture-status');
+            statusElem.textContent = posture.type;
+
+            statusElem.className = 'status-value ' +
+                (posture.is_bad ? 'status-danger' : 'status-normal');
+        }
+
+        // 显示提醒弹窗
+        function showAlert(data) {
+            const modal = document.getElementById('alert-modal');
+            const content = document.getElementById('alert-content');
+            const icon = document.getElementById('alert-icon');
+            const title = document.getElementById('alert-title');
+            const message = document.getElementById('alert-message');
+
+            // 设置图标和样式
+            if (data.level === 'critical') {
+                icon.textContent = '🚨';
+                content.className = 'alert-content alert-critical';
+            } else {
+                icon.textContent = '⚠️';
+                content.className = 'alert-content alert-warning';
+            }
+
+            title.textContent = data.title;
+            message.textContent = data.message;
+
+            modal.style.display = 'block';
+
+            // 5秒后自动关闭
+            setTimeout(closeAlert, 5000);
+        }
+
+        // 关闭提醒
+        function closeAlert() {
+            document.getElementById('alert-modal').style.display = 'none';
+        }
+
+        // Web语音播放（使用Web Speech API）
+        function playVoice(text) {
+            if ('speechSynthesis' in window) {
+                // 停止之前的语音
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 1.0;  // 语速
+                utterance.pitch = 1.0;  // 音调
+                utterance.volume = 1.0;  // 音量
+
+                window.speechSynthesis.speak(utterance);
+                console.log('播放语音:', text);
+            } else {
+                console.log('浏览器不支持语音合成');
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('alert-modal');
+            if (event.target == modal) {
+                closeAlert();
+            }
+        }
+    </script>
+</body>
+</html>

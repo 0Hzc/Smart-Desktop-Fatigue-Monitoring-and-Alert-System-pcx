@@ -1,19 +1,28 @@
 # 智能桌面疲劳监测系统 - 依赖库清单
 # Python 3.9+ 推荐
+# Ubuntu/Linux 兼容版本
 
 # 计算机视觉核心库
 opencv-python==4.8.1.78
 mediapipe==0.10.8
 numpy==1.24.3
 
+# Web框架（用于局域网Web界面）
+Flask==3.0.0
+Flask-SocketIO==5.3.5
+python-socketio==5.10.0
+python-engineio==4.8.0
+
 # 树莓派摄像头 (如果在树莓派上运行)
 # picamera2==0.3.12
 
-# GPIO控制 (仅树莓派需要)
+# GPIO控制 (仅树莓派需要，Ubuntu开发环境可选)
 # RPi.GPIO==0.7.1
 
-# 语音播报
+# 语音播报（pyttsx3在Linux需要额外依赖）
 pyttsx3==2.90
+# Linux语音引擎依赖（需要系统级安装）：
+# sudo apt-get install espeak espeak-data libespeak-dev
 
 # 配置文件解析
 PyYAML==6.0.1
@@ -24,3 +33,10 @@ scipy==1.11.4
 # 开发工具 (可选)
 # pytest==7.4.3
 # black==23.12.1
+
+# Ubuntu系统依赖说明：
+# 需要先安装系统级依赖：
+# sudo apt-get update
+# sudo apt-get install -y python3-opencv python3-pip espeak
+# sudo apt-get install -y libportaudio2 portaudio19-dev  # 音频支持
+
