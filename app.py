@@ -255,7 +255,7 @@ class WebMonitoringSystem:
             'fatigue': {
                 'level': fatigue_status['fatigue_level'],
                 'description': fatigue_status['fatigue_description'],
-                'ear': round(fatigue_status['ear'], 3),
+                'ear': round(fatigue_status['avg_ear'], 3),
                 'perclos': round(fatigue_status['perclos'] * 100, 1),
                 'blink_rate': fatigue_status['blinks_per_minute']
             },
