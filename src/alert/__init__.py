@@ -7,8 +7,17 @@
 from .alert_manager import AlertManager, AlertType, AlertLevel
 from .voice_alert import VoiceAlert
 from .led_alert import LEDAlert
-from .web_alert import WebAlert
-from .buzzer_alert import BuzzerAlert
+
+# Web相关模块使用懒加载，避免强制依赖Flask
+# 仅在app.py中使用Web功能时才需要导入
+try:
+    from .web_alert import WebAlert
+    from .buzzer_alert import BuzzerAlert
+    WEB_AVAILABLE = True
+except ImportError:
+    WebAlert = None
+    BuzzerAlert = None
+    WEB_AVAILABLE = False
 
 __all__ = [
     'AlertManager',
@@ -17,5 +26,6 @@ __all__ = [
     'VoiceAlert',
     'LEDAlert',
     'WebAlert',
-    'BuzzerAlert'
+    'BuzzerAlert',
+    'WEB_AVAILABLE'
 ]

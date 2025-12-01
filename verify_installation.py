@@ -38,8 +38,8 @@ def check_python_packages():
         'flask_socketio': 'Flask-SocketIO',
         'socketio': 'python-socketio',
         'engineio': 'python-engineio',
-        'yaml': 'PyYAML',
-        'scipy': 'scipy'
+        'yaml': 'PyYAML'
+        # 'scipy': 'scipy'  # 已移除：当前代码未使用
     }
 
     results = []

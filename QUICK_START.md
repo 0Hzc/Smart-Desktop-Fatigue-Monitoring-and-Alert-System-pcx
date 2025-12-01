@@ -21,7 +21,6 @@ sudo apt-get install -y build-essential python3-dev python3-pip cmake pkg-config
 sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 libgtk-3-0
 sudo apt-get install -y v4l-utils libv4l-dev
 sudo apt-get install -y espeak espeak-data libespeak-dev
-sudo apt-get install -y libatlas-base-dev libhdf5-dev
 ```
 
 ### 步骤3：创建虚拟环境（推荐）
@@ -70,7 +69,7 @@ python app.py
 
 ## 📦 核心依赖清单
 
-### Python包（9个）
+### Python包（8个）
 
 | 包名 | 版本 | 用途 |
 |------|------|------|
@@ -82,7 +81,6 @@ python app.py
 | python-socketio | 5.10.0 | Socket.IO客户端 |
 | python-engineio | 4.8.0 | Engine.IO核心 |
 | PyYAML | 6.0.1 | 配置解析 |
-| scipy | 1.11.4 | 科学计算 |
 
 ### 系统依赖
 
@@ -90,7 +88,6 @@ python app.py
 - **OpenCV**：libgl1-mesa-glx, libgtk-3-0等
 - **摄像头**：v4l-utils, libv4l-dev
 - **语音**：espeak, espeak-data
-- **科学计算**：libatlas-base-dev
 
 ---
 

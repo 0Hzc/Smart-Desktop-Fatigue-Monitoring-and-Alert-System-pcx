@@ -49,6 +49,7 @@ class AlertManager:
         # 各类提醒器
         self.voice_alert = None
         self.led_alert = None
+        self.gui_alert = None  # Web提醒器
 
         # 冷却时间跟踪（记录每种提醒类型的上次触发时间）
         self.last_alert_time: Dict[AlertType, float] = {}
@@ -70,6 +71,11 @@ class AlertManager:
         """设置LED提醒器"""
         self.led_alert = led_alert
         print("✓ LED提醒器已注册")
+    
+    def set_gui_alert(self, gui_alert):
+        """设置GUI/Web提醒器"""
+        self.gui_alert = gui_alert
+    print("✓ Web提醒器已注册")
 
     def can_alert(self, alert_type: AlertType) -> bool:
         """
@@ -119,8 +125,8 @@ class AlertManager:
             Thread(target=self._trigger_voice, args=(message,), daemon=True).start()
 
         # LED提醒
-        if self.enable_led and self.led_alert:
-            Thread(target=self._trigger_led, args=(level,), daemon=True).start()
+        if self.gui_alert:
+            Thread(target=self._trigger_gui, args=(alert_type, message, level), daemon=True).start()
 
     def _trigger_voice(self, message: str):
         """触发语音提醒（后台线程）"""
@@ -135,7 +141,12 @@ class AlertManager:
             self.led_alert.blink(level)
         except Exception as e:
             print(f"✗ LED提醒失败: {e}")
-
+    def _trigger_gui(self, alert_type: AlertType, message: str, level: AlertLevel):
+        """触发GUI/Web提醒（后台线程）"""
+        try:
+            self.gui_alert.show_alert(alert_type, message, level)
+        except Exception as e:
+            print(f"✗ GUI/Web提醒失败: {e}")
     def reset_cooldown(self, alert_type: Optional[AlertType] = None):
         """
         重置冷却时间

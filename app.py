@@ -110,12 +110,10 @@ class WebMonitoringSystem:
         # 初始化提醒系统（Web版）
         alert_config = self.config.get_alert_config()
         self.alert_manager = AlertManager(
-            enable_voice=False,  # Web端使用浏览器播放，不使用pyttsx3
-            enable_led=alert_config['enable_led'],
-            enable_gui=True,  # Web提醒替代GUI
-            cooldown_time=alert_config['cooldown_time']
+        enable_voice=False,
+        enable_led=alert_config['enable_led'],
+        cooldown_time=alert_config['cooldown_time']
         )
-
         # 初始化Web提醒器
         self.web_alert = WebAlert(socketio=socketio)
         self.alert_manager.set_gui_alert(self.web_alert)  # 使用web_alert替代gui_alert
