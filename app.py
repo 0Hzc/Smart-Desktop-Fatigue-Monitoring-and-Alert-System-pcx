@@ -260,7 +260,7 @@ class WebMonitoringSystem:
                 'blink_rate': fatigue_status['blinks_per_minute']
             },
             'distance': {
-                'value': round(distance_status['distance'], 1),
+                'value': round(distance_status['current_distance'], 1),
                 'is_too_close': distance_status['is_too_close']
             },
             'posture': {
@@ -289,7 +289,7 @@ class WebMonitoringSystem:
         # 距离
         y_offset += 30
         dist_color = (0, 0, 255) if distance_status['is_too_close'] else (0, 255, 0)
-        cv2.putText(frame, f"Distance: {distance_status['distance']:.1f} cm", (10, y_offset),
+        cv2.putText(frame, f"Distance: {distance_status['current_distance']:.1f} cm", (10, y_offset),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, dist_color, 2)
 
         # 坐姿
