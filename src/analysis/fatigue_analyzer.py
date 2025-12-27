@@ -56,6 +56,13 @@ class FatigueAnalyzer:
         self.blinks_per_minute = 0
         self.blink_window_start = time.time()  # 统计窗口开始时间
 
+        # 眨眼防抖动参数
+        self.closed_frame_counter = 0  # 连续闭眼帧计数
+        self.open_frame_counter = 0    # 连续睁眼帧计数
+        self.min_blink_frames = 2      # 最少连续闭眼帧数才算眨眼
+        self.min_open_frames = 2       # 最少连续睁眼帧数才能检测下一次眨眼
+        self.min_blink_interval = 0.1  # 两次眨眼最小间隔（秒）
+
         # PERCLOS计算（使用滑动窗口）
         self.eye_state_history = deque(maxlen=perclos_window * 30)  # 假设30fps
         self.perclos_value = 0.0
@@ -159,19 +166,30 @@ class FatigueAnalyzer:
 
     def _update_blink_detection(self, is_closed: bool, timestamp: float):
         """
-        更新眨眼检测
+        更新眨眼检测（带防抖动）
 
         Args:
             is_closed: 当前眼睛是否闭合
             timestamp: 当前时间戳
         """
-        # 检测眨眼：从睁眼到闭眼的转换
-        if is_closed and not self.is_blinking:
-            self.is_blinking = True
-            self.blink_counter += 1
+        # 更新帧计数器
+        if is_closed:
+            self.closed_frame_counter += 1
+            self.open_frame_counter = 0
+        else:
+            self.open_frame_counter += 1
+            self.closed_frame_counter = 0
 
-        # 检测睁眼：从闭眼到睁眼的转换
-        elif not is_closed and self.is_blinking:
+        # 检测眨眼：从睁眼到闭眼的转换（需要连续多帧 + 时间间隔）
+        if not self.is_blinking and self.closed_frame_counter >= self.min_blink_frames:
+            # 检查距离上次眨眼的时间间隔
+            if timestamp - self.last_blink_time >= self.min_blink_interval:
+                self.is_blinking = True
+                self.blink_counter += 1
+                self.last_blink_time = timestamp
+
+        # 检测睁眼：从闭眼到睁眼的转换（需要连续多帧）
+        elif self.is_blinking and self.open_frame_counter >= self.min_open_frames:
             self.is_blinking = False
 
         # 计算每分钟眨眼次数（每60秒重置一次统计窗口）
@@ -314,6 +332,9 @@ class FatigueAnalyzer:
         self.is_blinking = False
         self.blinks_per_minute = 0
         self.blink_window_start = time.time()
+        self.last_blink_time = time.time()
+        self.closed_frame_counter = 0
+        self.open_frame_counter = 0
         self.eye_state_history.clear()
         self.perclos_value = 0.0
         self.eye_closed_start = None
